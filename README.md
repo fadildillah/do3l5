@@ -1,36 +1,135 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Do3l'5
+
+A personal analog film roll archive — built as a mobile-first progressive web app with a dark, cinematic aesthetic.
+
+Track your film rolls from shooting through development, upload scans, and browse your archive in a minimal gallery interface.
+
+## Tech Stack
+
+- **Framework** — [Next.js 16](https://nextjs.org/) (App Router, React 19)
+- **Database** — [Supabase](https://supabase.com/) (PostgreSQL)
+- **Image Storage** — [Cloudinary](https://cloudinary.com/) via `next-cloudinary`
+- **Styling** — Tailwind CSS 4 + custom CSS variables
+- **Language** — TypeScript
+- **PWA** — Service worker + web manifest for installable app experience
+
+## Features
+
+- **Roll Management** — Create, edit, and delete film rolls with metadata (film stock, camera, ISO, process, lab, location, dates, notes)
+- **Roll Status Tracking** — Track rolls through `shooting` → `undeveloped` → `developed` stages
+- **Photo Uploads** — Upload scanned frames to Cloudinary, linked to specific rolls
+- **Photo Grid & Lightbox** — Browse photos in a responsive grid with a full-screen lightbox viewer
+- **Cover Photos** — Set a cover photo for each roll
+- **Favorites** — Mark individual frames as favorites
+- **Mobile-First Design** — Optimized for phones with safe-area insets, large touch targets, and responsive typography
+- **PWA Support** — Installable as a standalone app on mobile devices
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 18+
+- A [Supabase](https://supabase.com/) project
+- A [Cloudinary](https://cloudinary.com/) account
+
+### Environment Variables
+
+Create a `.env.local` file in the project root:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The app will be available at [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── rolls/            # CRUD endpoints for rolls
+│   │   ├── photos/           # Photo management endpoints
+│   │   └── upload/           # Cloudinary upload endpoint
+│   ├── rolls/[id]/           # Roll detail & edit pages
+│   ├── upload/               # New roll creation page
+│   ├── layout.tsx            # Root layout with PWA setup
+│   ├── page.tsx              # Home — roll archive listing
+│   └── globals.css           # Design system & global styles
+├── components/
+│   ├── RollCard.tsx           # Roll preview card
+│   ├── PhotoGrid.tsx          # Responsive photo grid
+│   ├── PhotoUploader.tsx      # Drag-and-drop photo upload
+│   ├── Lightbox.tsx           # Full-screen photo viewer
+│   └── InteractiveLink.tsx    # Enhanced link component
+├── lib/
+│   ├── supabase.ts            # Supabase client
+│   └── cloudinary.ts          # Cloudinary client
+└── types/
+    └── index.ts               # TypeScript type definitions
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## API Routes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Method   | Endpoint          | Description             |
+| -------- | ----------------- | ----------------------- |
+| `GET`    | `/api/rolls`      | List all rolls          |
+| `POST`   | `/api/rolls`      | Create a new roll       |
+| `GET`    | `/api/rolls/:id`  | Get a single roll       |
+| `PATCH`  | `/api/rolls/:id`  | Update a roll           |
+| `DELETE` | `/api/rolls/:id`  | Delete a roll           |
+| `POST`   | `/api/upload`     | Upload photo to Cloudinary |
+| `GET`    | `/api/photos`     | List/manage photos      |
 
-## Deploy on Vercel
+## Database Schema
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### `rolls`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Column           | Type      | Description                     |
+| ---------------- | --------- | ------------------------------- |
+| `id`             | uuid      | Primary key                     |
+| `roll_number`    | integer   | Sequential roll number          |
+| `film_stock`     | text      | Film stock name                 |
+| `camera`         | text      | Camera used                     |
+| `iso`            | integer   | Film ISO/ASA                    |
+| `process`        | text      | Development process (C-41, etc) |
+| `frames_total`   | integer   | Total frames on roll            |
+| `status`         | text      | `shooting` / `undeveloped` / `developed` |
+| `date_started`   | date      | Date roll was loaded            |
+| `date_finished`  | date      | Date roll was finished          |
+| `date_developed` | date      | Date roll was developed         |
+| `lab`            | text      | Development lab                 |
+| `location`       | text      | Shooting location               |
+| `notes`          | text      | Additional notes                |
+| `cover_photo_id` | text      | Reference to cover photo        |
+| `created_at`     | timestamp | Record creation time            |
+
+### `photos`
+
+| Column         | Type      | Description               |
+| -------------- | --------- | ------------------------- |
+| `id`           | uuid      | Primary key               |
+| `roll_id`      | uuid      | Foreign key → rolls       |
+| `frame_number` | integer   | Frame number on roll      |
+| `url`          | text      | Cloudinary URL            |
+| `public_id`    | text      | Cloudinary public ID      |
+| `width`        | integer   | Image width in pixels     |
+| `height`       | integer   | Image height in pixels    |
+| `is_favorite`  | boolean   | Favorited flag            |
+| `notes`        | text      | Frame notes               |
+| `created_at`   | timestamp | Record creation time      |
+
+## License
+
+Private project.

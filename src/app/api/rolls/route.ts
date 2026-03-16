@@ -18,22 +18,17 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET() {
   try {
-    const { id } = await params;
     const { data, error } = await supabase
       .from("rolls")
       .select("*")
-      .eq("id", id)
-      .single();
+      .order("created_at", { ascending: false });
 
     if (error) throw error;
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Get roll error:", error);
-    return NextResponse.json({ error: "Roll not found" }, { status: 404 });
+    console.error("List rolls error:", error);
+    return NextResponse.json({ error: "Failed to list rolls" }, { status: 500 });
   }
 }

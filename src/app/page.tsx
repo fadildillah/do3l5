@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { Roll } from "@/types";
+import { Roll, Photo } from "@/types";
 import RollCard from "@/components/RollCard";
 import Link from "next/link";
 
@@ -10,6 +10,25 @@ export default async function HomePage() {
     .from("rolls")
     .select("*")
     .order("roll_number", { ascending: false });
+
+  // Fetch preview photos for all rolls in one query
+  const rollIds = rolls?.map((r: Roll) => r.id) ?? [];
+  const { data: allPhotos } = rollIds.length > 0
+    ? await supabase
+      .from("photos")
+      .select("*")
+      .in("roll_id", rollIds)
+      .order("frame_number", { ascending: true })
+    : { data: [] };
+
+  // Group photos by roll_id (max 4 per roll for preview)
+  const photosByRoll: Record<string, Photo[]> = {};
+  (allPhotos ?? []).forEach((photo: Photo) => {
+    if (!photosByRoll[photo.roll_id]) photosByRoll[photo.roll_id] = [];
+    if (photosByRoll[photo.roll_id].length < 4) {
+      photosByRoll[photo.roll_id].push(photo);
+    }
+  });
 
   const developedCount = rolls?.filter((r: Roll) => r.status === "developed").length ?? 0;
 
@@ -69,7 +88,7 @@ export default async function HomePage() {
               className="animate-fade-in"
               style={{ animationDelay: `${Math.min(idx * 0.04, 0.3)}s`, opacity: 0 }}
             >
-              <RollCard roll={roll} />
+              <RollCard roll={roll} previewPhotos={photosByRoll[roll.id] ?? []} />
             </div>
           ))}
         </div>

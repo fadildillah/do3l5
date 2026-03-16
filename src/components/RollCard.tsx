@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Roll } from "@/types";
+import { Roll, Photo } from "@/types";
+import { getCloudinaryUrl } from "@/lib/cloudinary";
 
 const STATUS_MAP = {
   developed: { label: "DEVELOPED", bg: "#2a2a1e", color: "#c8a84b" },
@@ -7,9 +8,10 @@ const STATUS_MAP = {
   undeveloped: { label: "PENDING DEV", bg: "#2a1e1e", color: "#c87a7a" },
 };
 
-export default function RollCard({ roll }: { roll: Roll }) {
+export default function RollCard({ roll, previewPhotos = [] }: { roll: Roll; previewPhotos?: Photo[] }) {
   const status = STATUS_MAP[roll.status];
   const isDeveloped = roll.status === "developed";
+  const hasPhotos = previewPhotos.length > 0;
 
   return (
     <Link
@@ -39,7 +41,34 @@ export default function RollCard({ roll }: { roll: Roll }) {
           alignItems: "center",
           justifyContent: "center",
         }}>
-          {isDeveloped ? (
+          {hasPhotos ? (
+            <div style={{
+              width: "100%",
+              height: "100%",
+              display: "grid",
+              gridTemplateColumns: previewPhotos.length === 1
+                ? "1fr"
+                : previewPhotos.length === 2
+                  ? "1fr 1fr"
+                  : previewPhotos.length === 3
+                    ? "1fr 1fr 1fr"
+                    : "1fr 1fr 1fr 1fr",
+              gap: "2px",
+            }}>
+              {previewPhotos.map((photo) => (
+                <div
+                  key={photo.id}
+                  style={{
+                    backgroundImage: `url(${getCloudinaryUrl(photo.public_id, { width: 300, quality: 60 })})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    width: "100%",
+                    height: "100%",
+                  }}
+                />
+              ))}
+            </div>
+          ) : isDeveloped ? (
             <div style={{
               width: "100%", height: "100%",
               background: "linear-gradient(135deg, #1a1510, var(--bg-base))",

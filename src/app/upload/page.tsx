@@ -6,8 +6,9 @@ declare global {
   }
 }
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 const labelStyle: React.CSSProperties = {
   fontFamily: "var(--font-mono)",
@@ -21,6 +22,18 @@ const labelStyle: React.CSSProperties = {
 export default function UploadPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) {
+        router.replace("/login");
+      } else {
+        setAuthChecking(false);
+      }
+    });
+  }, [router]);
   const [form, setForm] = useState({
     roll_number: "",
     film_stock: "",
@@ -35,6 +48,8 @@ export default function UploadPage() {
     notes: "",
     status: "undeveloped",
   });
+
+  if (authChecking) return null;
 
   const update = (key: string, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));

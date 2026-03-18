@@ -1,4 +1,8 @@
+"use client";
+
+import { useState, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Roll, Photo } from "@/types";
 import { getCloudinaryUrl } from "@/lib/cloudinary";
 
@@ -9,9 +13,21 @@ const STATUS_MAP = {
 };
 
 export default function RollCard({ roll, previewPhotos = [] }: { roll: Roll; previewPhotos?: Photo[] }) {
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+
+  const handleImageError = useCallback((id: string) => {
+    setFailedImages((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
+
+  const validPhotos = previewPhotos.filter(p => !failedImages.has(p.id));
+
   const status = STATUS_MAP[roll.status];
   const isDeveloped = roll.status === "developed";
-  const hasPhotos = previewPhotos.length > 0;
+  const hasPhotos = validPhotos.length > 0;
 
   return (
     <Link
@@ -46,26 +62,33 @@ export default function RollCard({ roll, previewPhotos = [] }: { roll: Roll; pre
               width: "100%",
               height: "100%",
               display: "grid",
-              gridTemplateColumns: previewPhotos.length === 1
+              gridTemplateColumns: validPhotos.length === 1
                 ? "1fr"
-                : previewPhotos.length === 2
+                : validPhotos.length === 2
                   ? "1fr 1fr"
-                  : previewPhotos.length === 3
+                  : validPhotos.length === 3
                     ? "1fr 1fr 1fr"
                     : "1fr 1fr 1fr 1fr",
               gap: "2px",
             }}>
-              {previewPhotos.map((photo) => (
+              {validPhotos.map((photo) => (
                 <div
                   key={photo.id}
                   style={{
-                    backgroundImage: `url(${getCloudinaryUrl(photo.public_id, { width: 300, quality: 60 })})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
+                    position: "relative",
                     width: "100%",
                     height: "100%",
                   }}
-                />
+                >
+                  <Image
+                    src={getCloudinaryUrl(photo.public_id, { width: 300, quality: 60 })}
+                    alt="Preview"
+                    fill
+                    sizes="(max-width: 600px) 25vw, 150px"
+                    style={{ objectFit: "cover", objectPosition: "center" }}
+                    onError={() => handleImageError(photo.id)}
+                  />
+                </div>
               ))}
             </div>
           ) : isDeveloped ? (

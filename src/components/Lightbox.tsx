@@ -12,6 +12,7 @@ type Props = {
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;
+  canEdit?: boolean;
 };
 
 export default function Lightbox({
@@ -20,6 +21,7 @@ export default function Lightbox({
   onClose,
   onNext,
   onPrev,
+  canEdit = false,
 }: Props) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
@@ -143,40 +145,12 @@ export default function Lightbox({
         {/* Meta & controls */}
         <div style={{
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
+          flexDirection: "column",
+          gap: "16px",
           marginTop: "16px",
           padding: "0 2px",
-          flexWrap: "wrap",
-          gap: "12px",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-            <span style={{
-              color: "var(--gold)",
-              fontFamily: "var(--font-mono)",
-              fontSize: "12px",
-              letterSpacing: "0.15em",
-            }}>
-              FRAME {String(photo.frame_number).padStart(2, "0")}
-            </span>
-            <span style={{
-              color: "var(--text-dim)",
-              fontFamily: "var(--font-mono)",
-              fontSize: "12px",
-            }}>
-              {rollName}
-            </span>
-            {photo.is_favorite && (
-              <span style={{
-                color: "var(--gold)",
-                fontFamily: "var(--font-mono)",
-                fontSize: "11px",
-              }}>★ FAVORIT</span>
-            )}
-          </div>
-
-          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-            {/* DELETE BUTTON MOVED TO TOP RIGHT */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
             <button
               onClick={onPrev}
               aria-label="Frame sebelumnya"
@@ -202,6 +176,44 @@ export default function Lightbox({
                 e.currentTarget.style.borderColor = "var(--border)";
               }}
             >← PREV</button>
+
+            {canEdit && (
+              <button
+                onClick={handleDelete}
+                aria-label="Hapus foto ini"
+                style={{
+                  background: "transparent",
+                  border: "1px solid var(--border)",
+                  color: "var(--red-dim)",
+                  fontSize: "12px",
+                  fontFamily: "var(--font-mono)",
+                  letterSpacing: "0.1em",
+                  cursor: deleting ? "not-allowed" : "pointer",
+                  height: "44px",
+                  padding: "0 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "var(--radius)",
+                  transition: "color 0.2s, border-color 0.2s",
+                }}
+                onPointerEnter={(e) => {
+                  if (!deleting) {
+                    e.currentTarget.style.color = "var(--red)";
+                    e.currentTarget.style.borderColor = "var(--red-dim)";
+                  }
+                }}
+                onPointerLeave={(e) => {
+                  if (!deleting) {
+                    e.currentTarget.style.color = "var(--red-dim)";
+                    e.currentTarget.style.borderColor = "var(--border)";
+                  }
+                }}
+              >
+                {deleting ? "DELETING..." : "DELETE"}
+              </button>
+            )}
+
             <button
               onClick={onNext}
               aria-label="Frame berikutnya"
@@ -228,6 +240,31 @@ export default function Lightbox({
               }}
             >NEXT →</button>
           </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "center" }}>
+            <span style={{
+              color: "var(--gold)",
+              fontFamily: "var(--font-mono)",
+              fontSize: "12px",
+              letterSpacing: "0.15em",
+            }}>
+              FRAME {String(photo.frame_number).padStart(2, "0")}
+            </span>
+            <span style={{
+              color: "var(--text-dim)",
+              fontFamily: "var(--font-mono)",
+              fontSize: "12px",
+            }}>
+              {rollName}
+            </span>
+            {photo.is_favorite && (
+              <span style={{
+                color: "var(--gold)",
+                fontFamily: "var(--font-mono)",
+                fontSize: "11px",
+              }}>★ FAVORIT</span>
+            )}
+          </div>
         </div>
 
         {photo.notes && (
@@ -253,42 +290,6 @@ export default function Lightbox({
         gap: "12px",
         zIndex: 50,
       }}>
-        {/* Delete */}
-        <button
-          onClick={handleDelete}
-          aria-label="Hapus foto ini"
-          style={{
-            background: "transparent",
-            border: "1px solid var(--border)",
-            color: "var(--red-dim)",
-            fontSize: "12px",
-            fontFamily: "var(--font-mono)",
-            letterSpacing: "0.1em",
-            cursor: deleting ? "not-allowed" : "pointer",
-            height: "44px",
-            padding: "0 16px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: "var(--radius)",
-            transition: "color 0.2s, border-color 0.2s",
-          }}
-          onPointerEnter={(e) => {
-            if (!deleting) {
-              e.currentTarget.style.color = "var(--red)";
-              e.currentTarget.style.borderColor = "var(--red-dim)";
-            }
-          }}
-          onPointerLeave={(e) => {
-            if (!deleting) {
-              e.currentTarget.style.color = "var(--red-dim)";
-              e.currentTarget.style.borderColor = "var(--border)";
-            }
-          }}
-        >
-          {deleting ? "DELETING..." : "DELETE"}
-        </button>
-
         {/* Close */}
         <button
           onClick={onClose}

@@ -1,13 +1,18 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import PhotoGrid from "@/components/PhotoGrid";
 import PhotoUploader from "@/components/PhotoUploader";
 import InteractiveLink from "@/components/InteractiveLink";
 
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 export default async function RollPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isAuthed = !!user;
 
   const [{ data: roll }, { data: photos }] = await Promise.all([
     supabase.from("rolls").select("*").eq("id", id).single(),
@@ -60,23 +65,25 @@ export default async function RollPage({ params }: { params: Promise<{ id: strin
             }}>
               ROLL #{String(roll.roll_number).padStart(2, "0")}
             </span>
-            <InteractiveLink
-              href={`/rolls/${roll.id}/edit`}
-              ariaLabel={`Edit roll ${roll.film_stock}`}
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "11px",
-                color: "var(--text-muted)",
-                letterSpacing: "0.15em",
-                textDecoration: "none",
-                border: "1px solid var(--border)",
-                padding: "6px 14px",
-                borderRadius: "var(--radius)",
-                transition: "border-color 0.2s",
-              }}
-            >
-              EDIT
-            </InteractiveLink>
+            {isAuthed && (
+              <InteractiveLink
+                href={`/rolls/${roll.id}/edit`}
+                ariaLabel={`Edit roll ${roll.film_stock}`}
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "11px",
+                  color: "var(--text-muted)",
+                  letterSpacing: "0.15em",
+                  textDecoration: "none",
+                  border: "1px solid var(--border)",
+                  padding: "6px 14px",
+                  borderRadius: "var(--radius)",
+                  transition: "border-color 0.2s",
+                }}
+              >
+                EDIT
+              </InteractiveLink>
+            )}
           </div>
 
           <div style={{
@@ -152,7 +159,7 @@ export default async function RollPage({ params }: { params: Promise<{ id: strin
                 {photos.filter((p) => p.is_favorite).length} FAVORIT
               </span>
             </div>
-            <PhotoGrid photos={photos} rollName={roll.film_stock} />
+            <PhotoGrid photos={photos} rollName={roll.film_stock} canEdit={isAuthed} />
           </div>
         ) : (
           <p style={{
@@ -166,7 +173,7 @@ export default async function RollPage({ params }: { params: Promise<{ id: strin
             Belum ada foto di roll ini.
           </p>
         )}
-        <PhotoUploader rollId={roll.id} />
+        {isAuthed && <PhotoUploader rollId={roll.id} />}
       </div>
     </main>
   );

@@ -1,11 +1,17 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { Roll, Photo } from "@/types";
 import RollCard from "@/components/RollCard";
 import Link from "next/link";
+import LogoutButton from "@/components/LogoutButton";
 
-export const revalidate = 0;
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 export default async function HomePage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isAuthed = !!user;
+
   const { data: rolls } = await supabase
     .from("rolls")
     .select("*")
@@ -21,13 +27,22 @@ export default async function HomePage() {
       .order("frame_number", { ascending: true })
     : { data: [] };
 
-  // Group photos by roll_id (max 4 per roll for preview)
+  // Group photos by roll_id
   const photosByRoll: Record<string, Photo[]> = {};
   (allPhotos ?? []).forEach((photo: Photo) => {
     if (!photosByRoll[photo.roll_id]) photosByRoll[photo.roll_id] = [];
-    if (photosByRoll[photo.roll_id].length < 4) {
-      photosByRoll[photo.roll_id].push(photo);
+    photosByRoll[photo.roll_id].push(photo);
+  });
+
+  // Pick up to 4 random photos for each roll
+  Object.keys(photosByRoll).forEach((rollId) => {
+    const photos = photosByRoll[rollId];
+    // Fisher-Yates shuffle for better randomness
+    for (let i = photos.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [photos[i], photos[j]] = [photos[j], photos[i]];
     }
+    photosByRoll[rollId] = photos.slice(0, 4);
   });
 
   const developedCount = rolls?.filter((r: Roll) => r.status === "developed").length ?? 0;
@@ -73,9 +88,14 @@ export default async function HomePage() {
               }}>
                 {developedCount} ROLLS
               </span>
-              <Link href="/upload" className="new-roll-link">
-                + NEW ROLL
-              </Link>
+              {isAuthed && (
+                <>
+                  <LogoutButton />
+                  <Link href="/upload" className="new-roll-link">
+                    + NEW ROLL
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </header>

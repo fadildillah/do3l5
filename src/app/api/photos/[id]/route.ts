@@ -1,5 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
@@ -10,6 +10,10 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
         const { id } = await params;
 
         // Get the photo to find its public_id for cloudinary and roll_id for revalidation
@@ -40,6 +44,32 @@ export async function DELETE(
             .eq("id", id);
 
         if (deleteError) throw deleteError;
+
+        // Reorder frame numbers
+        const { data: remainingPhotos } = await supabase
+            .from("photos")
+            .select("id, frame_number")
+            .eq("roll_id", photo.roll_id)
+            .order("frame_number", { ascending: true });
+
+        if (remainingPhotos) {
+            // Update sequentially
+            const updates = remainingPhotos.map((p, index) => {
+                const newFrame = index + 1;
+                if (p.frame_number !== newFrame) {
+                    return supabase
+                        .from("photos")
+                        .update({ frame_number: newFrame })
+                        .eq("id", p.id);
+                }
+                return null;
+            }).filter(Boolean);
+
+            if (updates.length > 0) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                await Promise.all(updates as any);
+            }
+        }
 
         // Bust Next.js server cache
         revalidatePath("/");

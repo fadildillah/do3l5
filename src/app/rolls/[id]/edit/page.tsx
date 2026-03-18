@@ -8,6 +8,7 @@ declare global {
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { Roll } from "@/types";
 
 const labelStyle: React.CSSProperties = {
@@ -29,15 +30,24 @@ export default function EditRollPage() {
     const [deleting, setDeleting] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [form, setForm] = useState<Partial<Roll>>({});
+    const [authChecking, setAuthChecking] = useState(true);
 
     useEffect(() => {
-        fetch(`/api/rolls/${id}`)
-            .then((r) => r.json())
-            .then((data) => {
-                setForm(data);
-                setLoading(false);
-            });
-    }, [id]);
+        const supabase = createClient();
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (!user) {
+                router.replace("/login");
+            } else {
+                setAuthChecking(false);
+                fetch(`/api/rolls/${id}`)
+                    .then((r) => r.json())
+                    .then((data) => {
+                        setForm(data);
+                        setLoading(false);
+                    });
+            }
+        });
+    }, [id, router]);
 
     const update = (key: string, value: string | number) =>
         setForm((prev) => ({ ...prev, [key]: value }));
@@ -91,7 +101,7 @@ export default function EditRollPage() {
         }
     };
 
-    if (loading) {
+    if (authChecking || loading) {
         return (
             <main style={{ background: "var(--bg-base)", minHeight: "100vh" }}>
                 <div style={{ maxWidth: "520px", margin: "0 auto", padding: "48px 20px" }}>

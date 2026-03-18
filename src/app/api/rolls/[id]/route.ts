@@ -1,5 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
@@ -10,6 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabase = await createClient();
     const { id } = await params;
     const { data, error } = await supabase
       .from("rolls")
@@ -30,6 +31,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { id } = await params;
     const body = await req.json();
 
@@ -57,6 +62,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { id } = await params;
 
     const { data: photos } = await supabase

@@ -10,7 +10,6 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const rollId = formData.get("roll_id") as string;
-    const frameNumber = formData.get("frame_number") as string;
 
     if (!file || !rollId) {
       return NextResponse.json({ error: "Missing file or roll_id" }, { status: 400 });
@@ -25,8 +24,6 @@ export async function POST(req: NextRequest) {
         .upload_stream(
           {
             folder: `do3l5/rolls/${rollId}`,
-            public_id: `frame_${String(frameNumber).padStart(2, "0")}`,
-            overwrite: true,
           },
           (error, result) => {
             if (error) reject(error);

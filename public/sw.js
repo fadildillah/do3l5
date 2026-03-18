@@ -28,8 +28,15 @@ self.addEventListener("fetch", (event) => {
   // Skip non-GET requests
   if (request.method !== "GET") return;
 
-  // Skip API routes entirely — always go to network
-  if (request.url.includes("/api/")) return;
+  // Skip API routes and Next.js RSC/Prefetch requests entirely — always go to network
+  if (
+    request.url.includes("/api/") ||
+    request.headers.has("RSC") ||
+    request.headers.has("Next-Router-Prefetch") ||
+    request.url.includes("?_rsc=")
+  ) {
+    return;
+  }
 
   // Navigation requests (HTML pages): NETWORK-FIRST
   // Always try the network so the user sees fresh data.

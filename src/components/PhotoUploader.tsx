@@ -38,12 +38,10 @@ export default function PhotoUploader({ rollId }: { rollId: string }) {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const frameNumber = i + 1;
 
       const formData = new FormData();
       formData.append("file", file);
       formData.append("roll_id", rollId);
-      formData.append("frame_number", String(frameNumber));
 
       const uploadRes = await fetch("/api/upload", {
         method: "POST",
@@ -56,7 +54,6 @@ export default function PhotoUploader({ rollId }: { rollId: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           roll_id: rollId,
-          frame_number: frameNumber,
           url: uploaded.url,
           public_id: uploaded.public_id,
           width: uploaded.width,

@@ -3,7 +3,7 @@ import { Roll, Photo } from "@/types";
 import RollCard from "@/components/RollCard";
 import Link from "next/link";
 
-export const revalidate = 60;
+export const revalidate = 0;
 
 export default async function HomePage() {
   const { data: rolls } = await supabase

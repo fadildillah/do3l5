@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { Photo } from "@/types";
 import { getCloudinaryUrl } from "@/lib/cloudinary";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 type Props = {
   photo: Photo;
@@ -14,6 +15,8 @@ type Props = {
 };
 
 export default function Lightbox({ photo, rollName, onClose, onPrev, onNext }: Props) {
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -49,6 +52,21 @@ export default function Lightbox({ photo, rollName, onClose, onPrev, onNext }: P
     touchStart.current = null;
   }, [onPrev, onNext]);
 
+  const handleDelete = async () => {
+    if (confirm("Apakah kamu yakin ingin menghapus frame/foto ini?")) {
+      setDeleting(true);
+      try {
+        await fetch(`/api/photos/${photo.id}`, { method: "DELETE" });
+        window.bustSWCache?.(['/', `/rolls/${photo.roll_id}`]);
+        router.refresh();
+        onClose();
+      } catch (err) {
+        console.error(err);
+        setDeleting(false);
+      }
+    }
+  };
+
   return (
     <div
       role="dialog"
@@ -73,12 +91,12 @@ export default function Lightbox({ photo, rollName, onClose, onPrev, onNext }: P
         onClick={(e) => e.stopPropagation()}
       >
         {/* Image */}
-        <div style={{ position: "relative", width: "100%", aspectRatio: "3/2" }}>
+        <div style={{ position: "relative", width: "100%", height: "70vh", maxHeight: "800px" }}>
           <Image
             src={getCloudinaryUrl(photo.public_id, { width: 1600, quality: 90 })}
             alt={`Frame ${photo.frame_number} from ${rollName}`}
             fill
-            className="object-contain"
+            style={{ objectFit: "contain" }}
             priority
           />
         </div>
@@ -118,7 +136,40 @@ export default function Lightbox({ photo, rollName, onClose, onPrev, onNext }: P
             )}
           </div>
 
-          <div style={{ display: "flex", gap: "4px" }}>
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              aria-label="Hapus foto ini"
+              style={{
+                background: "none",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius)",
+                color: "var(--red-dim)",
+                fontFamily: "var(--font-mono)",
+                fontSize: "12px",
+                letterSpacing: "0.1em",
+                cursor: deleting ? "not-allowed" : "pointer",
+                padding: "10px 16px",
+                minHeight: "44px",
+                transition: "color 0.15s, border-color 0.15s",
+              }}
+              onPointerEnter={(e) => {
+                if (!deleting) {
+                  e.currentTarget.style.color = "var(--red)";
+                  e.currentTarget.style.borderColor = "var(--red-dim)";
+                }
+              }}
+              onPointerLeave={(e) => {
+                if (!deleting) {
+                  e.currentTarget.style.color = "var(--red-dim)";
+                  e.currentTarget.style.borderColor = "var(--border)";
+                }
+              }}
+            >
+              {deleting ? "DELETING..." : "DELETE"}
+            </button>
+            <div style={{ width: "1px", height: "24px", background: "var(--bg-subtle)", margin: "0 2px" }} />
             <button
               onClick={onPrev}
               aria-label="Frame sebelumnya"

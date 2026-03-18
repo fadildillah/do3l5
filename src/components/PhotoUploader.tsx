@@ -1,5 +1,11 @@
 "use client";
 
+declare global {
+  interface Window {
+    bustSWCache?: (urls?: string[]) => void;
+  }
+}
+
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
@@ -64,6 +70,7 @@ export default function PhotoUploader({ rollId }: { rollId: string }) {
 
     setUploading(false);
     setFiles([]);
+    window.bustSWCache?.(['/', `/rolls/${rollId}`]);
     router.refresh();
   };
 

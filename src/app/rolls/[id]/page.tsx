@@ -4,7 +4,7 @@ import PhotoGrid from "@/components/PhotoGrid";
 import PhotoUploader from "@/components/PhotoUploader";
 import InteractiveLink from "@/components/InteractiveLink";
 
-export const revalidate = 60;
+export const revalidate = 0;
 
 export default async function RollPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

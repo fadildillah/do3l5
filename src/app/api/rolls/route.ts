@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,6 +12,9 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    revalidatePath("/");
+
     return NextResponse.json(data);
   } catch (error) {
     console.error("Create roll error:", error);

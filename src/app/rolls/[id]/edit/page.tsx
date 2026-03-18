@@ -1,5 +1,11 @@
 "use client";
 
+declare global {
+    interface Window {
+        bustSWCache?: (urls?: string[]) => void;
+    }
+}
+
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Roll } from "@/types";
@@ -57,6 +63,7 @@ export default function EditRollPage() {
                     location: form.location || null,
                 }),
             });
+            window.bustSWCache?.(['/', `/rolls/${id}`]);
             router.push(`/rolls/${id}`);
             router.refresh();
         } catch (err) {
@@ -74,6 +81,7 @@ export default function EditRollPage() {
         setDeleting(true);
         try {
             await fetch(`/api/rolls/${id}`, { method: "DELETE" });
+            window.bustSWCache?.(['/', `/rolls/${id}`]);
             router.push("/");
             router.refresh();
         } catch (err) {

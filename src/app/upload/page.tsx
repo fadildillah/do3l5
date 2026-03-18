@@ -1,5 +1,11 @@
 "use client";
 
+declare global {
+  interface Window {
+    bustSWCache?: (urls?: string[]) => void;
+  }
+}
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -55,7 +61,11 @@ export default function UploadPage() {
       });
 
       const roll = await res.json();
-      if (roll.id) router.push(`/rolls/${roll.id}`);
+      if (roll.id) {
+        window.bustSWCache?.(['/']);
+        router.push(`/rolls/${roll.id}`);
+        router.refresh();
+      }
     } catch (err) {
       console.error(err);
     } finally {

@@ -1,6 +1,7 @@
-const CACHE_NAME = "do3l5-v1";
+const CACHE_NAME = "do3l5-v2";
 const STATIC_ASSETS = ["/", "/upload"];
 
+// Install: pre-cache shell pages
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
@@ -8,6 +9,7 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
+// Activate: purge old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -19,24 +21,65 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// Fetch: strategy depends on request type
 self.addEventListener("fetch", (event) => {
-  // Skip non-GET dan API routes
-  if (event.request.method !== "GET") return;
-  if (event.request.url.includes("/api/")) return;
+  const { request } = event;
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request)
+  // Skip non-GET requests
+  if (request.method !== "GET") return;
+
+  // Skip API routes entirely — always go to network
+  if (request.url.includes("/api/")) return;
+
+  // Navigation requests (HTML pages): NETWORK-FIRST
+  // Always try the network so the user sees fresh data.
+  // Fall back to cache only when offline.
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
         .then((response) => {
           if (response.ok) {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
           return response;
         })
-        .catch(() => cached);
+        .catch(() => caches.match(request).then((cached) => cached || caches.match("/")))
+    );
+    return;
+  }
 
-      return cached || fetchPromise;
+  // Static assets (JS, CSS, images, fonts): CACHE-FIRST
+  // These are typically hashed by Next.js and safe to serve from cache.
+  event.respondWith(
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
+      return fetch(request).then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
+        return response;
+      });
     })
   );
+});
+
+// Listen for CACHE_BUST messages from the client.
+// After a mutation (create/edit/delete), the client sends a list of URLs
+// to purge so the next navigation always hits the network.
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "CACHE_BUST") {
+    const urls = event.data.urls || [];
+    caches.open(CACHE_NAME).then((cache) => {
+      urls.forEach((url) => {
+        // Delete the exact URL and any request that matches it
+        cache.delete(new Request(url)).catch(() => { });
+        // Also try with the origin prefix for absolute matching
+        if (!url.startsWith("http")) {
+          cache.delete(new Request(self.registration.scope.replace(/\/$/, "") + url)).catch(() => { });
+        }
+      });
+    });
+  }
 });

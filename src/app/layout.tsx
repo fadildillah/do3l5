@@ -34,6 +34,15 @@ export default function RootLayout({
                   navigator.serviceWorker.register('/sw.js');
                 });
               }
+              // Global helper: purge SW-cached URLs after mutations
+              window.bustSWCache = function(urls) {
+                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                  navigator.serviceWorker.controller.postMessage({
+                    type: 'CACHE_BUST',
+                    urls: urls || ['/']
+                  });
+                }
+              };
             `,
           }}
         />

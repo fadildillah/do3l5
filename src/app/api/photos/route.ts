@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,6 +12,12 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // Revalidate the parent roll page so the new photo appears immediately
+    if (body.roll_id) {
+      revalidatePath(`/rolls/${body.roll_id}`);
+    }
+
     return NextResponse.json(data);
   } catch (error) {
     console.error("Create photo error:", error);

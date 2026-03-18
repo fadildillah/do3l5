@@ -36,39 +36,72 @@ export default function PhotoUploader({ rollId }: { rollId: string }) {
     setUploading(true);
     setProgress(0);
 
+    const failedFiles: File[] = [];
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("roll_id", rollId);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("roll_id", rollId);
 
-      const uploadRes = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const uploaded = await uploadRes.json();
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
 
-      await fetch("/api/photos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          roll_id: rollId,
-          url: uploaded.url,
-          public_id: uploaded.public_id,
-          width: uploaded.width,
-          height: uploaded.height,
-          is_favorite: false,
-        }),
-      });
+        if (!uploadRes.ok) {
+          console.error(`Gagal upload ke Cloudinary untuk file: ${file.name}`);
+          failedFiles.push(file);
+          continue;
+        }
+
+        const uploaded = await uploadRes.json();
+
+        if (uploaded.error) {
+          console.error(`Pesan error dari Cloudinary untuk ${file.name}:`, uploaded.error);
+          failedFiles.push(file);
+          continue;
+        }
+
+        const dbRes = await fetch("/api/photos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            roll_id: rollId,
+            url: uploaded.url,
+            public_id: uploaded.public_id,
+            width: uploaded.width,
+            height: uploaded.height,
+            is_favorite: false,
+          }),
+        });
+
+        if (!dbRes.ok) {
+          console.error(`Gagal menyimpan foto di database untuk file: ${file.name}`);
+          failedFiles.push(file);
+        }
+      } catch (err) {
+        console.error(`System error upload ${file.name}:`, err);
+        failedFiles.push(file);
+      }
 
       setProgress(Math.round(((i + 1) / files.length) * 100));
     }
 
     setUploading(false);
-    setFiles([]);
-    window.bustSWCache?.(['/', `/rolls/${rollId}`]);
-    router.refresh();
+    setFiles(failedFiles);
+
+    // Only refresh if at least one photo was successfully uploaded
+    if (failedFiles.length < files.length) {
+      window.bustSWCache?.(['/', `/rolls/${rollId}`]);
+      router.refresh();
+    }
+
+    if (failedFiles.length > 0) {
+      alert(`${failedFiles.length} foto gagal terupload (mungkin ukuran file terlalu besar).`);
+    }
   };
 
   return (
